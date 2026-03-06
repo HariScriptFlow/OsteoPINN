@@ -13,13 +13,13 @@ import matplotlib.patches as mpatches
 import torch
 import torch.nn as nn
 import pickle, os
-
+from shap_integration import SHAPOsteoporosis
 # ─────────────────────────────────────────────────────────────────
 # PAGE CONFIG
 # ─────────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="OsteoPINN — Bone Health AI",
-    page_icon="🦴",
+    page_icon=" ",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -30,11 +30,11 @@ st.set_page_config(
 st.markdown("""
 <style>
     .main-title {
-        font-size: 2.4rem; font-weight: 800; color: #1a1a2e;
+        font-size: 2.4rem; font-weight: 800; color: #ffffff;
         text-align: center; margin-bottom: 0.2rem;
     }
     .sub-title {
-        font-size: 1rem; color: #555; text-align: center; margin-bottom: 2rem;
+        font-size: 1rem; color: #ffffff; text-align: center; margin-bottom: 2rem;
     }
     .metric-card {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -47,7 +47,7 @@ st.markdown("""
     .card-osteopenia { background: linear-gradient(135deg,#f39c12,#e67e22); border-radius:12px; padding:1rem; color:white; text-align:center; }
     .card-osteoporosis{ background: linear-gradient(135deg,#e74c3c,#c0392b); border-radius:12px; padding:1rem; color:white; text-align:center; }
     .info-box { background:#f0f4ff; border-left:4px solid #667eea; padding:0.8rem 1rem; border-radius:6px; margin:0.5rem 0; color:#1a1a2e !important; font-size:1rem; }
-    .section-header { font-size:1.3rem; font-weight:700; color:#1a1a2e; border-bottom:2px solid #667eea; padding-bottom:0.3rem; margin:1.5rem 0 0.8rem 0; }
+    .section-header { font-size:1.3rem; font-weight:700; color:#ffffff; border-bottom:2px solid #667eea; padding-bottom:0.3rem; margin:1.5rem 0 0.8rem 0; }
     div[data-testid="stMetricValue"] { font-size: 1.8rem !important; }
 </style>
 """, unsafe_allow_html=True)
@@ -98,6 +98,16 @@ def load_model():
 model_loaded = os.path.exists("outputs/models/pinn_model.pth")
 if model_loaded:
     model, scaler, feat_cols = load_model()
+    # ─────────────────────────────────────────────────────────────────
+# LOAD SHAP ANALYZER
+# ─────────────────────────────────────────────────────────────────
+@st.cache_resource
+def load_shap_analyzer():
+    if model_loaded:
+        return SHAPOsteoporosis(model, scaler, feat_cols)
+    return None
+
+shap_analyzer = load_shap_analyzer()
 
 # ─────────────────────────────────────────────────────────────────
 # PREDICTION FUNCTION
@@ -150,14 +160,14 @@ def predict_patient(age, sex_binary, weight_kg, height_cm, medication_risk,
 # ─────────────────────────────────────────────────────────────────
 # HEADER
 # ─────────────────────────────────────────────────────────────────
-st.markdown('<div class="main-title">🦴 OsteoPINN</div>', unsafe_allow_html=True)
+st.markdown('<div class="main-title"> OsteoPINN</div>', unsafe_allow_html=True)
 st.markdown('<div class="sub-title">Physics-Informed Neural Network for Bone Health & Osteoporosis Risk Prediction</div>', unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────────────────────────
 # SIDEBAR — Patient Input
 # ─────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("## 👤 Patient Profile")
+    st.markdown("##  Patient Profile")
     st.markdown("---")
 
     age         = st.slider("Age (years)", 18, 95, 55)
@@ -167,7 +177,7 @@ with st.sidebar:
     height_cm   = st.slider("Height (cm)", 140, 200, 162)
 
     st.markdown("---")
-    st.markdown("### 💊 Medical History")
+    st.markdown("###  Medical History")
     medication  = st.selectbox("Current Medication",
                                ["No medication", "Glucocorticoids", "Anticonvulsant", "Other"])
     med_map     = {"No medication":0, "Glucocorticoids":2, "Anticonvulsant":1, "Other":1}
@@ -176,7 +186,7 @@ with st.sidebar:
     postmenop   = st.toggle("Postmenopausal", value=(sex=="Female" and age>50))
 
     st.markdown("---")
-    st.markdown("### 🥗 Lifestyle Factors")
+    st.markdown("###  Lifestyle Factors")
     low_calcium = st.toggle("Low calcium intake")
     low_vitd    = st.toggle("Insufficient Vitamin D")
     sedentary   = st.toggle("Sedentary lifestyle")
@@ -185,13 +195,13 @@ with st.sidebar:
     alcohol     = st.toggle("Alcohol consumption")
 
     st.markdown("---")
-    predict_btn = st.button("🔍 Predict Now", type="primary", use_container_width=True)
+    predict_btn = st.button(" Predict Now", type="primary", use_container_width=True)
 
 # ─────────────────────────────────────────────────────────────────
 # MAIN CONTENT
 # ─────────────────────────────────────────────────────────────────
 if not model_loaded:
-    st.warning("⚠️ Model not found. Please run `python step3_pinn.py` first to train the model.")
+    st.warning(" Model not found. Please run `python step3_pinn.py` first to train the model.")
     st.stop()
 
 # Auto-predict or on button press
@@ -205,10 +215,10 @@ result = predict_patient(
 tcat_names   = {0:"Normal", 1:"Osteopenia", 2:"Osteoporosis"}
 tcat_colors  = {0:"#2ecc71", 1:"#f39c12", 2:"#e74c3c"}
 tcat_cards   = {0:"card-normal", 1:"card-osteopenia", 2:"card-osteoporosis"}
-tcat_icons   = {0:"🟢", 1:"🟡", 2:"🔴"}
+tcat_icons   = {0:" ", 1:" ", 2:" "}
 
 # ── Row 1: Key Metrics ──
-st.markdown('<div class="section-header">📊 Prediction Results</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-header"> Prediction Results</div>', unsafe_allow_html=True)
 
 col1, col2, col3, col4 = st.columns(4)
 
@@ -241,7 +251,7 @@ st.markdown(f"""
 col_left, col_right = st.columns([3, 2])
 
 with col_left:
-    st.markdown('<div class="section-header">📈 BMD Trajectory (Next 20 Years)</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header"> BMD Trajectory (Next 20 Years)</div>', unsafe_allow_html=True)
 
     ages_proj = list(range(age, age+21))
     k = 0.007 if sex_binary else 0.005
@@ -273,7 +283,7 @@ with col_left:
     plt.close()
 
 with col_right:
-    st.markdown('<div class="section-header">🔮 Future Projections</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header"> Future Projections</div>', unsafe_allow_html=True)
 
     st.markdown(f"""
     <div style="background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:14px;padding:1.2rem 1.5rem;margin-bottom:1rem;">
@@ -305,7 +315,7 @@ with col_right:
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown('<div class="section-header">⚠️ Risk Factors</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header"> Risk Factors</div>', unsafe_allow_html=True)
     risk_factors = []
     if postmenop:       risk_factors.append(("🔴 Postmenopausal", 3))
     if low_calcium:     risk_factors.append(("🟠 Low Calcium", 2))
@@ -321,10 +331,65 @@ with col_right:
         for factor, score in sorted(risk_factors, key=lambda x: -x[1]):
             st.markdown(f"• {factor}")
     else:
-        st.success("✅ No major risk factors identified!")
+        st.success(" No major risk factors identified!")
+        # ── Row 2.5: SHAP Explanation ──
+if st.toggle(" Show SHAP Explanation (What's affecting your risk?)", value=False):
+    st.markdown('<div class="section-header"> SHAP Model Explanation</div>', unsafe_allow_html=True)
+    
+    if shap_analyzer:
+        # Create raw features dict from current inputs
+        raw_features = {
+            'age': age, 'sex_binary': sex_binary, 'weight_kg': weight_kg,
+            'height_cm': height_cm, 'bmi': weight_kg / (height_cm / 100) ** 2,
+            'medication_risk': med_risk, 'family_history': int(family_hist),
+            'postmenopausal': int(postmenop), 'low_calcium': int(low_calcium),
+            'low_vitd': int(low_vitd), 'sedentary': int(sedentary),
+            'underweight': int(underweight_t), 'smoking': int(smoking),
+            'alcohol': int(alcohol), 'risk_score': result['risk_score']
+        }
+        
+        explanation = shap_analyzer.explain_patient(raw_features)
+        
+        if explanation:
+            # Show top features
+            st.markdown("### Top Features Affecting Your Prediction")
+            contrib_table = explanation['contributions'][['Feature', 'SHAP_Value', 'Abs_SHAP']].head(10)
+            contrib_table = contrib_table.rename(columns={
+                'SHAP_Value': 'Impact →',
+                'Abs_SHAP': 'Importance'
+            })
+            st.dataframe(contrib_table.style.highlight_max(axis=0, color="#6394fd"), 
+                        use_container_width=True)
+            
+            # Plot
+            col_explain1, col_explain2 = st.columns(2)
+            
+            with col_explain1:
+                fig_contrib = shap_analyzer.plot_contributions(explanation)
+                if fig_contrib:
+                    st.pyplot(fig_contrib)
+                    plt.close()
+            
+            with col_explain2:
+                st.info(f"""
+                ### Model Interpretation
+                **Base BMD (Average):** {explanation['base_value']:.4f} g/cm²
+                
+                **Your Key Factors:**
+                1. **{explanation['contributions'].iloc[0]['Feature']}** 
+                   Impact: {explanation['contributions'].iloc[0]['SHAP_Value']:.4f}
+                
+                2. **{explanation['contributions'].iloc[1]['Feature']}** 
+                   Impact: {explanation['contributions'].iloc[1]['SHAP_Value']:.4f}
+                
+                3. **{explanation['contributions'].iloc[2]['Feature']}** 
+                   Impact: {explanation['contributions'].iloc[2]['SHAP_Value']:.4f}
+                """)
+    else:
+        st.warning(" SHAP analyzer not available. Make sure model is loaded.")
 
 # ── Row 3: WHO T-Score Scale ──
-st.markdown('<div class="section-header">📏 WHO T-Score Classification</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-header"> WHO T-Score Classification</div>', unsafe_allow_html=True)
 
 fig2, ax2 = plt.subplots(figsize=(10, 1.5))
 ax2.barh([0], [1], color='#2ecc71', height=0.4, label='Normal (T ≥ -1.0)')
@@ -343,10 +408,10 @@ plt.close()
 
 # ── Row 4: Model Comparison (if available) ──
 if os.path.exists("outputs/model_comparison.csv"):
-    st.markdown('<div class="section-header">🏆 Model Performance Comparison</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header"> Model Performance Comparison</div>', unsafe_allow_html=True)
     comp_df = pd.read_csv("outputs/model_comparison.csv", index_col=0)
-    st.dataframe(comp_df.style.highlight_max(axis=0, color='#d4f7d4')
-                              .highlight_min(axis=0, subset=['BMD MAE'], color='#d4f7d4')
+    st.dataframe(comp_df.style.highlight_max(axis=0, color="#f95b2b")
+                              .highlight_min(axis=0, subset=['BMD MAE'], color="#f95b2b")
                               .format("{:.3f}"), use_container_width=True)
 
 # ── Row 5: Saved plots ──
@@ -361,7 +426,7 @@ plot_files = {
 
 available = {k: v for k, v in plot_files.items() if os.path.exists(v)}
 if available:
-    st.markdown('<div class="section-header">📉 Analysis Plots</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header"> Analysis Plots</div>', unsafe_allow_html=True)
     tabs = st.tabs(list(available.keys()))
     for tab, (name, path) in zip(tabs, available.items()):
         with tab:
@@ -371,7 +436,7 @@ if available:
 st.markdown("---")
 st.markdown("""
 <div style='text-align:center; color:#888; font-size:0.8rem;'>
-    🦴 OsteoPINN — Physics-Informed Neural Network | Built with PyTorch + Streamlit<br>
-    ⚠️ For research purposes only. Not a substitute for clinical diagnosis.
+    OsteoPINN — Physics-Informed Neural Network | Built with PyTorch + Streamlit<br>
+    For research purposes only. Not a substitute for clinical diagnosis.
 </div>
 """, unsafe_allow_html=True)
